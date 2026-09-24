@@ -1,6 +1,8 @@
 # ods-skills
 
-Claude Code skills for building pages on the West of England Combined Authority (WECA) open data portal, which runs on Opendatasoft (Huwise).
+Unofficial Claude Code skills for building pages on the West of England Combined Authority (WECA) open data portal, which runs on Opendatasoft (Huwise).
+
+These are my own personal skills and not official resources for either Huwise or WECA.
 
 Each skill is a folder with a `SKILL.md`. Claude Code loads the skill when a task matches its `description`.
 
