@@ -87,7 +87,7 @@ turns the chart into an empty box.
 
 A chart needs a height on its wrapper or it collapses.
 
-## Time series (line untested; stacked yearly columns tested)
+## Time series (line tested; stacked yearly columns tested)
 
 Needs: a date or datetime field.
 
@@ -124,6 +124,56 @@ Highcharts paints a white background, which stands out on a tinted page:
 ```scss
 .my-page .highcharts-background { fill: transparent; }
 ```
+
+## Lines per category over a percentile band, switched by a dropdown (tested)
+
+Needs: a date facet, a text facet to break down by, and per-row band
+columns. Tested on `west-of-england-indicators` (2026-09-25). One context
+per card; the dropdown sets the context's refine.
+
+```html
+<div ng-if="options.length"
+     ng-init="sel.c = options[0]; card.parameters['refine.indicator'] = sel.c.indicator">
+    <select ng-model="sel.c"
+            ng-options="r as r.indicator for r in options track by r.indicator"
+            ng-change="card.parameters['refine.indicator'] = sel.c.indicator"></select>
+    <div class="chart-wrap">
+        <ods-chart ng-repeat="k in [sel.c.indicator]" single-y-axis="true"
+                   single-y-axis-label="{{ sel.c.unit }}" display-legend="false">
+            <ods-chart-query context="card" field-x="period" timescale="{{ sel.c.timescale }}" maxpoints="0">
+                <ods-chart-serie chart-type="arearange" color="#cfcfcf" index="1"
+                                 subseries='[{"func": "MIN", "yAxis": "other_p10"}, {"func": "MAX", "yAxis": "other_p90"}]'>
+                </ods-chart-serie>
+                <ods-chart-serie chart-type="line" function-y="AVG" expression-y="other_median" color="#6f6f6f" index="2">
+                </ods-chart-serie>
+            </ods-chart-query>
+            <ods-chart-query context="card" field-x="period" timescale="{{ sel.c.timescale }}" maxpoints="0"
+                             series-breakdown="areanm" category-colors="areaColours">
+                <ods-chart-serie chart-type="line" function-y="AVG" expression-y="value" index="3">
+                </ods-chart-serie>
+            </ods-chart-query>
+        </ods-chart>
+    </div>
+</div>
+```
+
+- `category-colors` takes a scope object mapping each breakdown value to a
+  colour, so fixed colours per category need no serie per category.
+- The band goes in its own query: inside the breakdown query it would be
+  split by category too.
+- `timescale="{{ }}"` on `ods-chart-query` updates live (month to year and
+  back). `single-y-axis-label="{{ }}"` does not; the one-item `ng-repeat`
+  rebuilds the chart whenever the indicator changes, which fixes it.
+- Tooltips show the date ("November 2017", or "2023" for a financial year)
+  and the value with space thousands separators. They cannot show a unit
+  that varies by row or a display label for the period, so put those in
+  text beside the chart.
+- An `ng-if` on `chart_type` swaps in a different view per indicator.
+
+A population pyramid is easier as HTML bars from `ods-adv-analysis`
+(group by `age_min, age, sex`, order by `age_min desc`, `ng-style` widths)
+than as a chart: the order is under your control and a comparison
+outline is a bordered box.
 
 ## Filters beside a result list (tested)
 

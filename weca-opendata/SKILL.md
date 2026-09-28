@@ -107,6 +107,9 @@ For more rows, export instead of paging with `offset`.
   (`order_by=total_kt desc`).
 - **An aggregate with no `group_by` repeats itself** once per `limit` row
   (ten identical rows by default). Add `limit=1`, or group by something.
+- **`min`/`max`/`avg` take numbers or dates only.** `min(period_label)` on a
+  text field fails with "StatAggregation only supports numeric or date
+  expression". Put the text field in `group_by` instead.
 - **Strings take single or double quotes.** Double quotes help when the
   query sits inside single-quoted shell text or an HTML attribute.
 - **Full-text search** is a quoted term on its own: `where="transport"`.
@@ -196,6 +199,34 @@ What the API won't tell you.
   `current_energy_rating`, `transaction_type`, `lodgement_datetime`.
 - `tenure` and `transaction_type` use two spellings (capitalised for
   certificates lodged 2012 to 2014), so each value appears twice.
+
+### `ons_values_west_of_england` and `ons_indicators` (ONS local statistics)
+
+- Exported from the MotherDuck views `ons_explore.main.export_ons_values` and
+  `export_ons_indicators` (repo `~/projects/west-of-england-ons`,
+  `sql/02_export_views.sql`). Uploaded 2026-09-25; page
+  `west-of-england-indicators`.
+- `ons_values_west_of_england`: 13,041 rows, one per authority, indicator,
+  period (and sex and age for the pyramid). Only the four West of England
+  authorities; everyone else is summarised on each row as
+  `other_p10`/`other_median`/`other_p90`/`other_min`/`other_max`.
+- **Band, `england_value` and `n_*` repeat on each authority's row.** Use
+  MIN, MAX or AVG, never SUM.
+- `Population by age and sex` has sex `Male`, `Female` **and `All`**: exclude
+  `All` for a pyramid. `age_min` (int) orders the age bands; `age` sorts as
+  text.
+- `status` is null on all but 16 rows (all 2019/20 child-weight
+  indicators). Grouping on it through `ods-adv-analysis` breaks the widget
+  (see the `ods-pages` skill).
+- Facets on values: `indicator`, `category`, `chart_type`, `areanm`,
+  `period`, `period_label`, `sex`, `age`, `age_min`. On indicators:
+  `indicator`, `category`, `chart_type`, `is_category_default`.
+- `is_category_default` is **text** (`'true'`/`'false'`), not boolean.
+- `period` is the start of the period; `period_label` is the display form
+  (2023/24, Mid-2024, Jun 2026). `timescale` on the indicators dataset
+  says whether to chart by `year` or `month`.
+- The unit of `Housing affordability ratio (residence-based)` is `%` in the
+  source metadata, though the indicator is a ratio.
 
 ### Other frequently used datasets
 

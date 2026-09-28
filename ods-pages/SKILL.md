@@ -48,6 +48,16 @@ these before debugging anything else.
   `.odswidget-facet__category-count { display: none; }`. Only the first
   `visible-items` values (default 6) show before a "More" link; raise it for
   short lists such as regions.
+- **`ods-adv-analysis` drops the whole result if a `group-by` field holds
+  nulls.** The API returns the rows, but the variable stays `[]` and nothing
+  is logged. Group only on fields that are never null.
+- **A widget variable named like a context shadows it.**
+  `ods-adv-analysis="inds" ods-adv-analysis-context="inds"` works once, then
+  fails with `context.wait is not a function`. Give results their own names.
+- **`ods-chart` draws at a fixed 400px** whatever its wrapper's height, and
+  spills over the text below. Add `.my-wrapper .odswidget-charts { height: 100%; }`.
+- **`ng-style` cannot set a CSS custom property** (`{'--c': x}`) with the
+  jQuery 2 the portal loads. Set the real property on each element.
 - **Not every `ods-*` attribute in an existing page comes from ods-widgets.**
   `ods-tooltip` is used throughout the library's own templates but is not
   registered in `ods-widgets.js`, so it works on the portal and does nothing
@@ -87,6 +97,12 @@ sector and gas. Summing it multiplies it by the number of rows. Find a
 filter that leaves exactly one row per entity and period, and sum only
 those rows (`widgets-aggregation.md`, ODSQL notes). ODSQL traps are listed
 there too; test each query with `curl` before putting it in a widget.
+
+If the page needs fields from two datasets, remember that ODSQL has no
+`JOIN`, but the back office does: the **Join datasets processor** copies
+fields from a remote dataset into each record at publish time, and other
+processors derive or reshape fields. Proposing one to the user often beats
+wiring several contexts together. See `reference/processors.md`.
 
 ### 3. Agree the layout before building
 
@@ -180,8 +196,25 @@ google-chrome --headless=new --hide-scrollbars --window-size=390,2400 \
 To check anything that needs a click, such as a toggle or a filter, drive
 real Chrome with Playwright (`uv run --with playwright python ...`,
 `p.chromium.launch(channel="chrome")`) and assert visibility before and
-after. Charts still did not draw within 60 seconds under Playwright, so leave
-those to the user. Maps do draw: click a shape at the centre of its
+after.
+
+**Charts do draw under Playwright** once Highcharts can load:
+`code.highcharts.com` answers automated Chrome (and `curl`) with 403, so the
+library never arrives and the chart never even sends its query. Serve the
+same version from jsdelivr (tested 2026-09-25):
+
+```python
+import re
+def reroute_highcharts(page):
+    def handle(route):
+        m = re.match(r'https://code\.highcharts\.com/([\d.]+)/(.*)', route.request.url)
+        route.fulfill(response=route.fetch(url=f'https://cdn.jsdelivr.net/npm/highcharts@{m[1]}/{m[2]}'))
+    page.route('https://code.highcharts.com/**', handle)
+```
+
+Call it before `page.goto`. Then count `.highcharts-series`, read axis
+titles and tooltips (`.highcharts-tooltip-container`) and screenshot the
+charts. Leave only the final look on the portal to the user. Maps do draw: click a shape at the centre of its
 `.map-panel path.leaflet-clickable` bounding box with `page.mouse.click`
 (a forced locator click can hit a second part of a multi-part shape and
 toggle the refine off). Measure alignment with `bounding_box()` rather than
@@ -207,6 +240,7 @@ page first, because the portal has no undo.
 | `reference/angularjs-in-ods.md` | The AngularJS subset ODS pages use |
 | `reference/css-and-layout.md` | Bootstrap 3 grid, sizing, SCSS in the kit |
 | `reference/recipes.md` | Working page fragments, marked tested or untested |
+| `reference/processors.md` | Back-office processors: dataset joins, derived fields, when to propose one |
 | `reference/preview-harness.html` | Standalone page for checking widgets against a live portal |
 
 The online code library at <https://codelibrary.opendatasoft.com/> has fuller
